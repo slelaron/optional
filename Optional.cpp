@@ -5,12 +5,12 @@ using namespace std;
 struct nullopt_t
 {};
 
-constexpr static nullopt_t nullopt;
+constexpr nullopt_t nullopt;
 
 struct in_place_t
 {};
 
-constexpr static in_place_t in_place;
+constexpr in_place_t in_place;
 
 template <typename T>
 struct optional
@@ -125,7 +125,7 @@ struct optional
 	template <typename... Args>
 	void emplace(Args&&... args)
 	{
-		reinterpret_cast <T*> (&data)->~T();
+		reset();
 		new (&data) T(std::forward <Args> (args)...);
 		valid = true;
 	}
@@ -160,7 +160,7 @@ struct optional
 
 	~optional()
 	{
-		reinterpret_cast <T*> (&data)->~T();
+		reset();
 	}
 
 	private:
