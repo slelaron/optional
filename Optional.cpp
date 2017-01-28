@@ -119,6 +119,7 @@ struct optional
 	template <typename... Args>
 	void emplace(Args&&... args)
 	{
+		reinterpret_cast <T*> (&data)->~T();
 		new (&data) T(std::forward <Args> (args)...);
 		valid = true;
 	}
