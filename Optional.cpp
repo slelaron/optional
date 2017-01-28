@@ -5,12 +5,12 @@ using namespace std;
 struct nullopt_t
 {};
 
-nullopt_t nullopt;
+constexpr static nullopt_t nullopt;
 
 struct in_place_t
 {};
 
-in_place_t in_place;
+constexpr static in_place_t in_place;
 
 template <typename T>
 struct optional
@@ -22,7 +22,7 @@ struct optional
 	optional(T rhs):
 		valid(true)
 	{
-		*(reinterpret_cast <T*> (&data)) = std::move(rhs);
+		new (&data) T(std::move(rhs));
 	}
 	
 	optional(nullopt_t):
@@ -33,7 +33,7 @@ struct optional
 	optional(in_place_t, Args&&... args):
 		valid(true)
 	{
-		new(&data) T(std::forward <Args> (args)...);
+		new (&data) T(std::forward <Args> (args)...);
 	}
 
 	optional(optional const& rhs):
@@ -41,7 +41,7 @@ struct optional
 	{
 		if (rhs.valid)
 		{
-			*(reinterpret_cast <T*> (&data)) = *(reinterpret_cast <const T*> (&rhs.data));
+			new (&data) T(rhs.get_const_data());
 		}
 	}
 
@@ -50,19 +50,25 @@ struct optional
 	{
 		if (rhs.valid)
 		{
-			*(reinterpret_cast <T*> (&data)) = std::move(*(reinterpret_cast <T*> (&rhs.data)));
+			new (&data) T(std::move(rhs.get_data()));
 		}
 	}
 
 	optional& operator=(optional const& rhs)
 	{
-		for_copy(*(reinterpret_cast <const T*> (&rhs.data)), rhs.valid);
+		if (valid)
+		{
+			for_copy(rhs.get_const_data(), rhs.valid);
+		}
 		return *this;
 	}
 	
 	optional& operator=(optional&& rhs)
 	{
-		for_copy(std::move(reinterpret_cast <T*> (&rhs.data)), rhs.valid);
+		if (valid)
+		{
+			for_copy(std::move(rhs.get_data()), rhs.valid);
+		}
 		return *this;
 	}
 
@@ -73,22 +79,22 @@ struct optional
 	
 	const T& operator*() const&
 	{
-		return *(reinterpret_cast <const T*> (&data));
+		return get_const_data();
 	}
 	
 	T& operator*() &
 	{
-		return *(reinterpret_cast <T*> (&data));
+		return get_data();
 	}
 
 	const T&& operator*() const&&
 	{
-		return *(reinterpret_cast <const T*> (&data));
+		return get_data();
 	}
 
 	T&& operator*() &&
 	{
-		return *(reinterpret_cast <T*> (&data));
+		return get_data();
 	}
 
 	const T* operator->() const
@@ -111,7 +117,7 @@ struct optional
 	{
 		if (valid)
 		{
-			return *(reinterpret_cast <T*> (&data));
+			return get_const_data();
 		}
 		return std::forward <U> (val);
 	}
@@ -137,16 +143,16 @@ struct optional
 	{
 		if (other.valid && valid)
 		{
-			swap(*(reinterpret_cast <T*> (&data)), *(reinterpret_cast <T*> (&other.data)));
+			swap(get_data(), other.get_data());
 		}
 		if (other.valid && !valid)
 		{
-			*(reinterpret_cast <T*> (&data)) = *(reinterpret_cast <T*> (&other.data));
+			new (&data) T(other.get_data());
 			reinterpret_cast <T*> (&other.data)->~T();
 		}
 		if (valid && !other.valid)
 		{
-			*(reinterpret_cast <T*> (&other.data)) = *(reinterpret_cast <T*> (&data));
+			new (&other.data) T(get_data());
 			reinterpret_cast <T*> (&data)->~T();
 		}
 		swap(valid, other.valid);
@@ -164,18 +170,24 @@ struct optional
 	{
 		if (!rvalid)
 		{
-			if (valid)
-			{
-				reinterpret_cast <T*> (&data)->~T();
-				valid = false;
-			}
+			reset();
 		}
 		else
 		{
-			*(reinterpret_cast <T*> (&data)) = std::forward <U> (rhs);
+			new (&data) T(std::forward <U> (rhs));
 			valid = true;
 		}
 		valid = rvalid;
+	}
+
+	T const& get_const_data() const
+	{
+		return *(reinterpret_cast <const T*> (&data));
+	}
+
+	T& get_data()
+	{
+		return *(reinterpret_cast <T*> (&data));
 	}
 	
 	typename std::aligned_storage<sizeof(T), alignof(T)>::type data;
