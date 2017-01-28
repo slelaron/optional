@@ -1,4 +1,3 @@
-#pragma once
 #include <iostream>
 
 using namespace std;
@@ -126,7 +125,7 @@ struct optional
 	template <typename... Args>
 	void emplace(Args&&... args)
 	{
-		reinterpret_cast <T*> (&data)->~T();
+		reset();
 		new (&data) T(std::forward <Args> (args)...);
 		valid = true;
 	}
@@ -161,7 +160,7 @@ struct optional
 
 	~optional()
 	{
-		reinterpret_cast <T*> (&data)->~T();
+		reset();
 	}
 
 	private:
