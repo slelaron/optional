@@ -174,6 +174,7 @@ struct optional
 			*(reinterpret_cast <T*> (&data)) = std::forward <U> (rhs);
 			valid = true;
 		}
+		valid = rvalid;
 	}
 	
 	typename std::aligned_storage<sizeof(T), alignof(T)>::type data;
