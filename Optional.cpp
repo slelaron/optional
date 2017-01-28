@@ -132,11 +132,11 @@ struct optional
 
 	void reset()
 	{
+		valid = false;
 		if (valid)
 		{
 			reinterpret_cast <T*> (&data)->~T();
 		}
-		valid = false;
 	}
 
 	void swap(optional& other)
